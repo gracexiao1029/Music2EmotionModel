@@ -10,6 +10,9 @@
 /dataSources.local.xml
 
 # --- Ensure these folders are tracked ---
+!test_wav/
+!audio_wav/
+!audio/
 !test_wav/**
 !audio_wav/**
 !audio/**
