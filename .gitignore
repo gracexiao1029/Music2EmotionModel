@@ -12,3 +12,10 @@
 # Ignore all audio files by default
 *.wav
 *.mp3
+__pycache__/
+*.pyc
+.DS_Store
+MEMD_audio/
+audio_wav/
+features/
+annotations/
