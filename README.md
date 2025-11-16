@@ -2,6 +2,84 @@
 
 A deep learning system that predicts emotional dimensions (valence and arousal) from music audio using mel-spectrogram features and a CNN architecture.
 
+### Environment Setup
+
+This project requires **Python 3.7+**, recommended **Python 3.8-3.10**.
+
+#### Method 1: Using conda (Recommended)
+
+**Option A: One-click creation using environment.yml (Simplest)**
+
+```bash
+# Execute in project directory, will automatically create environment named music2emotion
+conda env create -f environment.yml
+
+# Activate environment
+conda activate music2emotion
+```
+
+**Option B: Manual environment creation**
+
+```bash
+# Create new conda environment
+conda create -n music2emotion python=3.9
+conda activate music2emotion
+
+# Install PyTorch (choose according to your system, CPU version as example here)
+# If you have GPU, visit https://pytorch.org/ for appropriate installation command
+conda install pytorch torchvision torchaudio cpuonly -c pytorch
+
+# Install other dependencies
+pip install -r requirements.txt
+```
+
+**Update environment** (if environment.yml is modified):
+```bash
+conda env update -f environment.yml --prune
+```
+
+**Remove environment** (if need to recreate):
+```bash
+conda deactivate  # Exit environment first
+conda env remove -n music2emotion
+```
+
+#### Method 2: Using venv (Built-in Python)
+
+```bash
+# Create virtual environment
+python3 -m venv venv
+
+# Activate virtual environment
+# macOS/Linux:
+source venv/bin/activate
+# Windows:
+# venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+```
+
+#### Method 3: Direct pip (Not recommended, may pollute system environment)
+
+```bash
+pip install -r requirements.txt
+```
+
+#### Verify Installation
+
+```bash
+python -c "import torch; import librosa; import onnxruntime; print('All dependencies installed successfully!')"
+```
+
+#### System Requirements
+
+- **Operating System**: macOS, Linux, or Windows
+- **Python**: 3.7 or higher
+- **Memory**: Recommended at least 8GB RAM (during training)
+- **Storage**: At least 2GB free space (for models and dependencies)
+- **GPU**: Optional, but can accelerate training (requires CUDA version of PyTorch)
+
 ### Dataset
 
 https://cvml.unige.ch/databases/DEAM/
