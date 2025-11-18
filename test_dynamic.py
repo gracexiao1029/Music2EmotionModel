@@ -4,7 +4,7 @@ import numpy as np
 import os
 
 # Config - following train_dynamic.py rules
-MODEL_PATH = "emotion_model.onnx"
+MODEL_PATH = "emotion_model_dynamic.onnx"
 AUDIO_DIR = "test_wav"     # Folder containing r1.wav, r2.wav, ..., r24.wav
 SR = 22050
 N_MELS = 64
@@ -57,13 +57,14 @@ for i in range(1, NUM_FILES + 1):
     mel_db = mel_db[np.newaxis, :, :, :].astype(np.float32)
     
     # Run inference
-    try:
-        outputs = session.run([output_name], {input_name: mel_db})
-        emotion = outputs[0][0]  # [valence, arousal]
-        
-        # Print results
-        print(f"{filename}: Valence: {emotion[0]:.4f} | Arousal: {emotion[1]:.4f}")
-    except Exception as e:
-        print(f"{filename}: Error during inference - {e}")
-        print(f"  Input shape: {mel_db.shape}")
-        print(f"  Expected input shape from model: {session.get_inputs()[0].shape}")
+    outputs = session.run([output_name], {input_name: mel_db})
+    emotion = outputs[0][0]  # [valence, arousal]
+    
+    valence = emotion[0]
+    arousal = emotion[1]
+
+    normalized_valence = (valence - 4.01) / 2.46
+    normalized_arousal = (arousal - 3.58) / 3.30
+    # Print results
+    print(f"{filename}: Valence: {normalized_valence:.4f} | Arousal: {normalized_arousal:.4f}")
+
