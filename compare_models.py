@@ -1,11 +1,11 @@
 """
-Compare three model variants: Dynamic CNN, CNN+LSTM, and CNN+GRU.
+Compare two model variants: Dynamic CNN and CNN+LSTM.
 Produce a comparison table and representative plots.
 
 Notes:
 - Dynamic CNN (from train_dynamic.py) is a single-frame model. During evaluation we only use the last
   frame of each temporal sequence.
-- CNN+LSTM and CNN+GRU consume entire temporal sequences.
+- CNN+LSTM consumes entire temporal sequences.
 - All models are evaluated on the same temporal dataset to ensure fairness.
 """
 import os
@@ -47,7 +47,6 @@ print(f"Using device: {DEVICE}")
 # These definitions must match the training scripts exactly so we can load checkpoints.
 # - DynamicCNN   -> EmotionCNN in train_dynamic.py (single-frame model, 4 conv blocks)
 # - CNNLSTM      -> EmotionCNNLSTM in train_dynamic_cnn_lstm.py (temporal model)
-# - CNNGRU       -> EmotionCNNGRU in train_dynamic_cnn_gru.py (temporal model, not Unity-friendly)
 #
 # Why redefine?
 # 1. Class names differ between training scripts and this evaluation script.
@@ -106,11 +105,12 @@ class CNNLSTM(nn.Module):
             conv_block(1, 32),
             conv_block(32, 64),
             conv_block(64, 128),
+            conv_block(128, 256),  # Add one more conv layer (consistent with train_dynamic_cnn_lstm.py)
         )
         self.cnn_pool = nn.AdaptiveAvgPool2d((1, 1))
         self.lstm_hidden_dim = 128
         self.lstm = nn.LSTM(
-            input_size=128,
+            input_size=256,  # Updated to match 4-layer CNN output
             hidden_size=self.lstm_hidden_dim,
             num_layers=1,  # Single layer for Unity compatibility
             batch_first=True,  # [batch, seq_len, features] format for Unity
@@ -138,86 +138,19 @@ class CNNLSTM(nn.Module):
         # Reshape to [batch * time_steps, 1, n_mels, time_frames]
         x = x.view(batch_size * time_steps, channels, n_mels, time_frames)
         
-        # CNN feature extraction: [batch * time_steps, 128]
-        x = self.cnn_features(x)  # [batch * time_steps, 128, h, w]
-        x = self.cnn_pool(x)  # [batch * time_steps, 128, 1, 1]
-        x = x.view(batch_size * time_steps, -1)  # [batch * time_steps, 128]
+        # CNN feature extraction: [batch * time_steps, 256]
+        x = self.cnn_features(x)  # [batch * time_steps, 256, h, w]
+        x = self.cnn_pool(x)  # [batch * time_steps, 256, 1, 1]
+        x = x.view(batch_size * time_steps, -1)  # [batch * time_steps, 256]
         
-        # Reshape back to time sequence: [batch, time_steps, 128]
-        x = x.view(batch_size, time_steps, -1)  # [batch, time_steps, 128]
+        # Reshape back to time sequence: [batch, time_steps, 256]
+        x = x.view(batch_size, time_steps, -1)  # [batch, time_steps, 256]
         
         # LSTM processes time sequence (batch_first=True)
         lstm_out, (hidden, cell) = self.lstm(x)  # lstm_out: [batch, time_steps, hidden_dim]
         
         # Use last time step's output
         last_output = lstm_out[:, -1, :]  # [batch, hidden_dim]
-        
-        # Output layer
-        output = self.head(last_output)  # [batch, 2]
-        
-        return output
-
-# CNN + GRU (temporal, not supported by Unity but useful for comparison)
-class CNNGRU(nn.Module):
-    def __init__(self, n_mels=64, time_frames=None):
-        super().__init__()
-        def conv_block(in_c, out_c):
-            return nn.Sequential(
-                nn.Conv2d(in_c, out_c, 3, padding=1, bias=False),
-                nn.BatchNorm2d(out_c),
-                nn.ReLU(),
-                nn.MaxPool2d(2)
-            )
-        self.cnn_features = nn.Sequential(
-            conv_block(1, 32),
-            conv_block(32, 64),
-            conv_block(64, 128),
-        )
-        self.cnn_pool = nn.AdaptiveAvgPool2d((1, 1))
-        self.gru_hidden_dim = 128
-        self.gru = nn.GRU(
-            input_size=128,
-            hidden_size=self.gru_hidden_dim,
-            num_layers=2,
-            batch_first=False,
-            dropout=0.3,
-            bidirectional=False
-        )
-        self.head = nn.Sequential(
-            nn.Linear(self.gru_hidden_dim, 64),
-            nn.ReLU(),
-            nn.Dropout(0.3),
-            nn.Linear(64, 32),
-            nn.ReLU(),
-            nn.Dropout(0.2),
-            nn.Linear(32, 2)
-        )
-    def forward(self, x):
-        """
-        Args:
-            x: [batch, time_steps, 1, n_mels, time_frames]
-        Returns:
-            output: [batch, 2] (valence, arousal)
-        """
-        batch_size, time_steps, channels, n_mels, time_frames = x.size()
-        
-        # Reshape to [batch * time_steps, 1, n_mels, time_frames]
-        x = x.view(batch_size * time_steps, channels, n_mels, time_frames)
-        
-        # CNN feature extraction: [batch * time_steps, 128]
-        x = self.cnn_features(x)  # [batch * time_steps, 128, h, w]
-        x = self.cnn_pool(x)  # [batch * time_steps, 128, 1, 1]
-        x = x.view(batch_size * time_steps, -1)  # [batch * time_steps, 128]
-        
-        # Reshape back to time sequence: [time_steps, batch, 128]
-        x = x.view(batch_size, time_steps, -1)  # [batch, time_steps, 128]
-        x = x.transpose(0, 1)  # [time_steps, batch, 128]
-        
-        # GRU processes time sequence
-        gru_out, hidden = self.gru(x)  # gru_out: [time_steps, batch, hidden_dim]
-        
-        # Use last time step's output
-        last_output = gru_out[-1]  # [batch, hidden_dim]
         
         # Output layer
         output = self.head(last_output)  # [batch, 2]
@@ -392,17 +325,6 @@ else:
     print("CNN+LSTM model not found, skipping...")
     lstm_mae, lstm_r2 = None, None
 
-# Evaluate CNN + GRU
-print("\nEvaluating CNN+GRU...")
-gru_model = CNNGRU(n_mels=N_MELS, time_frames=mel_db_length).to(DEVICE)
-if os.path.exists("best_emotion_model_dynamic_cnn_gru.pt"):
-    gru_model.load_state_dict(torch.load("best_emotion_model_dynamic_cnn_gru.pt", map_location=DEVICE))
-    gru_mae, gru_r2, gru_preds, gru_labels = evaluate_model(gru_model, dynamic_val_loader, DEVICE)
-    print(f"CNN+GRU - MAE: {gru_mae:.4f}, R²: {gru_r2:.4f}")
-else:
-    print("CNN+GRU model not found, skipping...")
-    gru_mae, gru_r2 = None, None
-
 # ==================== VISUALIZATION ====================
 
 print("\n=== Building comparison plots ===\n")
@@ -417,7 +339,7 @@ ax_table.axis('tight')
 ax_table.axis('off')
 
 # Prepare rows
-models = ['Dynamic CNN', 'CNN+LSTM', 'CNN+GRU']
+models = ['Dynamic CNN', 'CNN+LSTM']
 mae_values = []
 r2_values = []
 
@@ -435,18 +357,10 @@ else:
     mae_values.append("N/A")
     r2_values.append("N/A")
 
-if gru_mae is not None:
-    mae_values.append(f"{gru_mae:.4f}")
-    r2_values.append(f"{gru_r2:.4f}")
-else:
-    mae_values.append("N/A")
-    r2_values.append("N/A")
-
 table_data = [
     ['Model', 'MAE (Mean Absolute Error)', 'R² Score'],
     ['Dynamic CNN', mae_values[0], r2_values[0]],
-    ['CNN+LSTM', mae_values[1], r2_values[1]],
-    ['CNN+GRU', mae_values[2], r2_values[2]]
+    ['CNN+LSTM', mae_values[1], r2_values[1]]
 ]
 
 table = ax_table.table(cellText=table_data, cellLoc='center', loc='center',
@@ -461,8 +375,8 @@ for i in range(3):
     table[(0, i)].set_text_props(weight='bold', color='white')
 
 # Row colors
-colors = ['#C8E6C9', '#A5D6A7', '#81C784']
-for i in range(1, 4):
+colors = ['#C8E6C9', '#A5D6A7']
+for i in range(1, 3):
     for j in range(3):
         table[(i, j)].set_facecolor(colors[i-1])
 
@@ -480,7 +394,7 @@ for i, (m, v) in enumerate(zip(models, mae_values)):
         mae_numeric.append(0)
         mae_labels.append(m)
 
-bars = ax_mae.bar(mae_labels, mae_numeric, color=['#4ECDC4', '#45B7D1', '#FF6B6B'], alpha=0.8)
+bars = ax_mae.bar(mae_labels, mae_numeric, color=['#4ECDC4', '#45B7D1'], alpha=0.8)
 ax_mae.set_ylabel('MAE', fontsize=12, fontweight='bold')
 ax_mae.set_title('Mean Absolute Error Comparison', fontsize=14, fontweight='bold')
 ax_mae.grid(True, alpha=0.3, axis='y')
@@ -501,7 +415,7 @@ for i, (m, v) in enumerate(zip(models, r2_values)):
         r2_numeric.append(0)
         r2_labels.append(m)
 
-bars = ax_r2.bar(r2_labels, r2_numeric, color=['#4ECDC4', '#45B7D1', '#FF6B6B'], alpha=0.8)
+bars = ax_r2.bar(r2_labels, r2_numeric, color=['#4ECDC4', '#45B7D1'], alpha=0.8)
 ax_r2.set_ylabel('R² Score', fontsize=12, fontweight='bold')
 ax_r2.set_title('R² Score Comparison', fontsize=14, fontweight='bold')
 ax_r2.grid(True, alpha=0.3, axis='y')
@@ -511,7 +425,7 @@ for i, (bar, val) in enumerate(zip(bars, r2_values)):
         ax_r2.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.02,
                    val, ha='center', va='bottom', fontweight='bold', fontsize=11)
 
-plt.suptitle('Model Performance Comparison: Dynamic CNN vs CNN+LSTM vs CNN+GRU', 
+plt.suptitle('Model Performance Comparison: Dynamic CNN vs CNN+LSTM', 
              fontsize=16, fontweight='bold', y=0.98)
 
 plt.savefig('model_comparison.png', dpi=300, bbox_inches='tight')
@@ -519,7 +433,7 @@ print("Comparison plots saved to model_comparison.png")
 
 # Console table
 print("\n" + "="*60)
-print("Model Performance Summary (Dynamic CNN vs CNN+LSTM vs CNN+GRU)")
+print("Model Performance Summary (Dynamic CNN vs CNN+LSTM)")
 print("="*60)
 print(f"{'Model':<20} {'MAE':<20} {'R²':<20}")
 print("-"*60)

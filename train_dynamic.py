@@ -5,6 +5,8 @@ import torch.optim as optim
 import librosa
 import pandas as pd
 import numpy as np
+import matplotlib
+matplotlib.use('Agg')  # Use non-interactive backend to avoid plt.show() blocking
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import r2_score, mean_absolute_error
@@ -397,48 +399,37 @@ print(f"Model exported to {OUTPUT_MODEL}")
 # Plot results
 print("\nGenerating plots...")
 epochs_range = range(1, len(train_losses) + 1)
-fig, axes = plt.subplots(2, 2, figsize=(14, 10))
+fig, axes = plt.subplots(1, 2, figsize=(14, 5))
 
 # Loss
-axes[0, 0].plot(epochs_range, train_losses, label="Train Loss", marker="o", linewidth=2)
-axes[0, 0].plot(epochs_range, val_losses, label="Val Loss", marker="s", linewidth=2)
-axes[0, 0].set_xlabel("Epoch")
-axes[0, 0].set_ylabel("Loss")
-axes[0, 0].set_title("Training and Validation Loss")
-axes[0, 0].legend()
-axes[0, 0].grid(True, alpha=0.3)
+axes[0].plot(epochs_range, train_losses, label="Train Loss", marker="o", linewidth=2)
+axes[0].plot(epochs_range, val_losses, label="Val Loss", marker="s", linewidth=2)
+axes[0].set_xlabel("Epoch", fontsize=12)
+axes[0].set_ylabel("Loss", fontsize=12)
+axes[0].set_title("Training and Validation Loss", fontsize=14, fontweight='bold')
+axes[0].legend(fontsize=11)
+axes[0].grid(True, alpha=0.3)
 
-# MAE
-axes[0, 1].plot(epochs_range, train_maes, label="Train MAE", marker="o", linewidth=2)
-axes[0, 1].plot(epochs_range, val_maes, label="Val MAE", marker="s", linewidth=2)
-axes[0, 1].set_xlabel("Epoch")
-axes[0, 1].set_ylabel("Mean Absolute Error")
-axes[0, 1].set_title("Training and Validation MAE")
-axes[0, 1].legend()
-axes[0, 1].grid(True, alpha=0.3)
-
-# R² (as accuracy metric)
-axes[1, 0].plot(epochs_range, train_r2s, label="Train R²", marker="o", linewidth=2)
-axes[1, 0].plot(epochs_range, val_r2s, label="Val R²", marker="s", linewidth=2)
-axes[1, 0].set_xlabel("Epoch")
-axes[1, 0].set_ylabel("R² Score")
-axes[1, 0].set_title("Training and Validation R² (Accuracy)")
-axes[1, 0].legend()
-axes[1, 0].grid(True, alpha=0.3)
-
-# Accuracy (threshold-based)
-axes[1, 1].plot(epochs_range, train_accs, label="Train Accuracy", marker="o", linewidth=2)
-axes[1, 1].plot(epochs_range, val_accs, label="Val Accuracy", marker="s", linewidth=2)
-axes[1, 1].set_xlabel("Epoch")
-axes[1, 1].set_ylabel("Accuracy (error < 1.5)")
-axes[1, 1].set_title("Training and Validation Accuracy")
-axes[1, 1].legend()
-axes[1, 1].grid(True, alpha=0.3)
+# Accuracy
+axes[1].plot(epochs_range, train_accs, label="Train Accuracy", marker="o", linewidth=2)
+axes[1].plot(epochs_range, val_accs, label="Val Accuracy", marker="s", linewidth=2)
+axes[1].set_xlabel("Epoch", fontsize=12)
+axes[1].set_ylabel("Accuracy (error < 1.5)", fontsize=12)
+axes[1].set_title("Training and Validation Accuracy", fontsize=14, fontweight='bold')
+axes[1].legend(fontsize=11)
+axes[1].grid(True, alpha=0.3)
 
 plt.tight_layout()
-plt.savefig("training_results_dynamic.png", dpi=150, bbox_inches='tight')
-print("Plots saved to training_results_dynamic.png")
-plt.show()
+# Save as PNG, SVG, and PDF for high resolution and selectable text
+plt.savefig("training_results_dynamic.png", dpi=300, bbox_inches='tight')
+plt.savefig("training_results_dynamic.svg", format='svg', bbox_inches='tight')
+plt.savefig("training_results_dynamic.pdf", format='pdf', bbox_inches='tight')
+print("Plots saved to:")
+print("  - training_results_dynamic.png (300 DPI)")
+print("  - training_results_dynamic.svg (vector, selectable text)")
+print("  - training_results_dynamic.pdf (vector, selectable text)")
+# Comment out plt.show() to avoid blocking
+# plt.show()
 
 print("\nTraining completed!")
 print(f"Best validation loss: {best_val_loss:.4f}")
