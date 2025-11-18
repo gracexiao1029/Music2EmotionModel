@@ -7,4 +7,5 @@ scikit-learn>=1.0.0
 tqdm>=4.62.0
 onnxruntime>=1.10.0
 onnx>=1.11.0
+soundfile>=0.12.0
 
