@@ -25,7 +25,12 @@ FEATURES_DIR = "features"  # Features file directory
 VALENCE_CSV = "annotations/valence.csv"
 AROUSAL_CSV = "annotations/arousal.csv"
 OUTPUT_MODEL = "emotion_model_dynamic_features.onnx"
-DEVICE = "mps" if torch.backends.mps.is_available() else "cpu"
+if torch.cuda.is_available():
+    DEVICE = "cuda"
+elif torch.backends.mps.is_available():
+    DEVICE = "mps"
+else:
+    DEVICE = "cpu"
 EPOCHS = 25
 BATCH_SIZE = 32  # Can increase batch size with features (feature vectors are smaller than images)
 LR = 5e-4

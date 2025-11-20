@@ -24,7 +24,13 @@ SR = 22050
 N_MELS = 64
 HOP_LENGTH = 512
 DURATION = 30  # 30-second audio segment
-DEVICE = "mps" if torch.backends.mps.is_available() else "cpu"  # Auto-detect available device (MPS/CPU)
+# DEVICE = "mps" if torch.backends.mps.is_available() else "cpu"  # Auto-detect available device (MPS/CPU)
+if torch.cuda.is_available():
+    DEVICE = "cuda"
+elif torch.backends.mps.is_available():
+    DEVICE = "mps"
+else:
+    DEVICE = "cpu"
 EPOCHS = 25  # Number of training epochs
 BATCH_SIZE = 16  # Batch size (increase if memory allows)
 LR = 5e-4  # Learning rate

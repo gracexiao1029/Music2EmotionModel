@@ -33,7 +33,12 @@ OUTPUT_MODEL = "emotion_model_dynamic_cnn_gru.onnx"
 SR = 22050
 N_MELS = 64
 HOP_LENGTH = 512
-DEVICE = "mps" if torch.backends.mps.is_available() else "cpu"
+if torch.cuda.is_available():
+    DEVICE = "cuda"
+elif torch.backends.mps.is_available():
+    DEVICE = "mps"
+else:
+    DEVICE = "cpu"
 EPOCHS = 25
 BATCH_SIZE = 8  # CNN+GRU requires more memory, reduce batch size
 LR = 5e-4

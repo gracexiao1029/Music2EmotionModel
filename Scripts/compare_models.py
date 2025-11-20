@@ -30,7 +30,12 @@ AROUSAL_CSV = "annotations/arousal.csv"
 SR = 22050
 N_MELS = 64
 HOP_LENGTH = 512
-DEVICE = "mps" if torch.backends.mps.is_available() else "cpu"
+if torch.cuda.is_available():
+    DEVICE = "cuda"
+elif torch.backends.mps.is_available():
+    DEVICE = "mps"
+else:
+    DEVICE = "cpu"
 BATCH_SIZE = 8
 MAX_SONGS = 1200
 SAMPLES_PER_SONG = 25

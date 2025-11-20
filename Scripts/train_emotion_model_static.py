@@ -28,7 +28,13 @@ SR = 22050
 N_MELS = 64
 HOP_LENGTH = 512
 DURATION = 30  # seconds
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+if torch.cuda.is_available():
+    DEVICE = "cuda"
+elif torch.backends.mps.is_available():
+    DEVICE = "mps"
+else:
+    DEVICE = "cpu"
 EPOCHS = 25
 BATCH_SIZE = 16
 LR = 5e-4
